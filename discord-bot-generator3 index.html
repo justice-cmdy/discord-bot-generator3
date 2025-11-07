@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Discord Bot Generator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at top left, #111927, #0d1117);
+      color: #e6edf3;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      margin: 2em 0;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem;
+      color: #58a6ff;
+      margin-bottom: 0.2em;
+    }
+    header p { color: #8b949e; margin: 0; }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 1rem;
+      padding: 2rem;
+      width: 90%;
+      max-width: 700px;
+      box-shadow: 0 0 20px rgba(88,166,255,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+    textarea, input {
+      width: 100%;
+      background: #0d1117;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      border-radius: 0.5rem;
+      padding: 0.8rem;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+      resize: none;
+    }
+    button {
+      margin-top: 1.5rem;
+      background: #238636;
+      border: none;
+      color: white;
+      padding: 0.8rem 1.6rem;
+      border-radius: 0.6rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover { background: #2ea043; }
+    pre {
+      margin-top: 1.5rem;
+      background: #0d1117;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🤖 Discord-Bot Generator</h1>
+    <p>Erstellt automatisch einen Discord-Bot mit Slash-Commands (/).</p>
+  </header>
+
+  <div class="card">
+    <label for="description">🧠 Beschreibe deinen Bot</label>
+    <textarea id="description" placeholder="z. B.: Erstelle mir einen Bot, der auf /hello antwortet und neue Mitglieder begrüßt."></textarea>
+
+    <label for="command">💬 Welchen Slash-Command möchtest du hinzufügen?</label>
+    <input id="command" placeholder="z. B.: hello, ping, info ..." />
+
+    <button onclick="generateBot()">🪄 Bot-Code generieren</button>
+
+    <pre id="output">// Der generierte Code erscheint hier …</pre>
+  </div>
+
+  <script>
+    function generateBot() {
+      const desc = document.getElementById('description').value.toLowerCase();
+      const cmdName = document.getElementById('command').value.trim() || "befehl";
+      let features = "";
+
+      // Begrüßungsfunktion automatisch hinzufügen
+      if (desc.includes("begrüß")) {
+        features += `
+@bot.event
+async def on_member_join(member):
+    channel = discord.utils.get(member.guild.text_channels, name="allgemein")
+    if channel:
+        await channel.send(f"Willkommen {member.mention}! 🎉")
+`;
+      }
+
+      // Slash-Command erstellen
+      features += `
+@bot.tree.command(name="${cmdName}", description="Ein einfacher /${cmdName}-Befehl")
+async def ${cmdName}(interaction: discord.Interaction):
+    await interaction.response.send_message("Hey! 👋 Ich bin online und bereit.")
+`;
+
+      const code = `
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+intents = discord.Intents.default()
+intents.members = True
+
+bot = commands.Bot(command_prefix="/", intents=intents)
+
+@bot.event
+async def on_ready():
+    await bot.tree.sync()
+    print(f"🤖 {bot.user} ist online und Slash-Commands wurden synchronisiert!")
+
+${features}
+
+# ⚠️ Bitte deinen echten Token NIEMALS öffentlich teilen!
+bot.run("DEIN_TOKEN_HIER")
+`;
+
+      document.getElementById('output').textContent = code.trim();
+    }
+  </script>
+</body>
+</html>
