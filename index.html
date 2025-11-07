@@ -2,30 +2,76 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Discord Bot Generator</title>
+  <title>Discord Bot Generator – Chat Version</title>
   <style>
     * { box-sizing: border-box; }
     body {
       font-family: "Inter", sans-serif;
-      background: radial-gradient(circle at top left, #111927, #0d1117);
+      background: #0d1117;
       color: #e6edf3;
       margin: 0;
-      padding: 0;
+      height: 100vh;
+      display: flex;
+    }
+    /* --- Sidebar --- */
+    .sidebar {
+      width: 260px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar h2 {
+      text-align: center;
+      color: #58a6ff;
+      padding: 1rem;
+      border-bottom: 1px solid #30363d;
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .chat-item {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid #30363d;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .chat-item:hover, .chat-item.active {
+      background: #1f6feb33;
+    }
+    .new-chat {
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      border-top: 1px solid #30363d;
+    }
+    .new-chat:hover { background: #2ea043; }
+
+    /* --- Main content --- */
+    .main {
+      flex: 1;
+      padding: 2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100vh;
+      overflow-y: auto;
     }
     header {
-      margin: 2em 0;
       text-align: center;
+      margin-bottom: 1rem;
     }
     header h1 {
-      font-size: 2rem;
       color: #58a6ff;
-      margin-bottom: 0.2em;
+      margin-bottom: 0.3rem;
     }
-    header p { color: #8b949e; margin: 0; }
+    header p { color: #8b949e; }
+
     .card {
       background: #161b22;
       border: 1px solid #30363d;
@@ -35,6 +81,7 @@
       max-width: 700px;
       box-shadow: 0 0 20px rgba(88,166,255,0.1);
     }
+
     label {
       display: block;
       margin-top: 1rem;
@@ -51,18 +98,26 @@
       margin-top: 0.5rem;
       resize: none;
     }
-    button {
+
+    .buttons {
+      display: flex;
+      justify-content: space-between;
       margin-top: 1.5rem;
+    }
+    button {
       background: #238636;
       border: none;
       color: white;
-      padding: 0.8rem 1.6rem;
+      padding: 0.8rem 1.4rem;
       border-radius: 0.6rem;
       font-size: 1rem;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: background 0.2s;
     }
     button:hover { background: #2ea043; }
+    .reset { background: #d73a49; }
+    .reset:hover { background: #f85149; }
+
     pre {
       margin-top: 1.5rem;
       background: #0d1117;
@@ -76,30 +131,91 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>🤖 Discord-Bot Generator</h1>
-    <p>Erstellt automatisch einen Discord-Bot mit Slash-Commands (/).</p>
-  </header>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>💬 Projekte</h2>
+    <div class="chat-list" id="chatList"></div>
+    <button class="new-chat" onclick="newChat()">+ Neues Projekt</button>
+  </div>
 
-  <div class="card">
-    <label for="description">🧠 Beschreibe deinen Bot</label>
-    <textarea id="description" placeholder="z. B.: Erstelle mir einen Bot, der auf /hello antwortet und neue Mitglieder begrüßt."></textarea>
+  <!-- Main -->
+  <div class="main">
+    <header>
+      <h1>🤖 Discord-Bot Generator</h1>
+      <p>Erstelle individuelle Bot-Projekte mit Slash-Commands.</p>
+    </header>
 
-    <label for="command">💬 Welchen Slash-Command möchtest du hinzufügen?</label>
-    <input id="command" placeholder="z. B.: hello, ping, info ..." />
+    <div class="card">
+      <label for="description">🧠 Beschreibe deinen Bot</label>
+      <textarea id="description" placeholder="z. B.: Ein Bot, der /hello und /ping kann."></textarea>
 
-    <button onclick="generateBot()">🪄 Bot-Code generieren</button>
+      <label for="command">💬 Welchen Slash-Command möchtest du hinzufügen?</label>
+      <input id="command" placeholder="z. B.: hello, ping, info ..." />
 
-    <pre id="output">// Der generierte Code erscheint hier …</pre>
+      <div class="buttons">
+        <button onclick="generateBot()">🪄 Generieren</button>
+        <button class="reset" onclick="resetChat()">♻️ Reset</button>
+      </div>
+
+      <pre id="output">// Der generierte Code erscheint hier …</pre>
+    </div>
   </div>
 
   <script>
+    let chats = JSON.parse(localStorage.getItem("botChats") || "{}");
+    let currentChat = null;
+
+    function saveChats() {
+      localStorage.setItem("botChats", JSON.stringify(chats));
+    }
+
+    function renderChatList() {
+      const chatList = document.getElementById("chatList");
+      chatList.innerHTML = "";
+      Object.keys(chats).forEach(name => {
+        const div = document.createElement("div");
+        div.className = "chat-item" + (name === currentChat ? " active" : "");
+        div.textContent = name;
+        div.onclick = () => loadChat(name);
+        chatList.appendChild(div);
+      });
+    }
+
+    function newChat() {
+      const name = prompt("Name für dein neues Projekt:");
+      if (!name) return;
+      chats[name] = { description: "", command: "", output: "" };
+      currentChat = name;
+      saveChats();
+      renderChatList();
+      loadChat(name);
+    }
+
+    function loadChat(name) {
+      currentChat = name;
+      const chat = chats[name];
+      document.getElementById("description").value = chat.description || "";
+      document.getElementById("command").value = chat.command || "";
+      document.getElementById("output").textContent = chat.output || "// Der generierte Code erscheint hier …";
+      renderChatList();
+    }
+
+    function resetChat() {
+      if (!currentChat) return alert("Kein Projekt ausgewählt!");
+      if (confirm("Alles in diesem Projekt löschen?")) {
+        chats[currentChat] = { description: "", command: "", output: "" };
+        saveChats();
+        loadChat(currentChat);
+      }
+    }
+
     function generateBot() {
+      if (!currentChat) return alert("Bitte zuerst ein Projekt auswählen oder erstellen!");
+
       const desc = document.getElementById('description').value.toLowerCase();
       const cmdName = document.getElementById('command').value.trim() || "befehl";
       let features = "";
 
-      // Begrüßungsfunktion automatisch hinzufügen
       if (desc.includes("begrüß")) {
         features += `
 @bot.event
@@ -110,7 +226,6 @@ async def on_member_join(member):
 `;
       }
 
-      // Slash-Command erstellen
       features += `
 @bot.tree.command(name="${cmdName}", description="Ein einfacher /${cmdName}-Befehl")
 async def ${cmdName}(interaction: discord.Interaction):
@@ -136,10 +251,23 @@ ${features}
 
 # ⚠️ Bitte deinen echten Token NIEMALS öffentlich teilen!
 bot.run("DEIN_TOKEN_HIER")
-`;
+`.trim();
 
-      document.getElementById('output').textContent = code.trim();
+      document.getElementById("output").textContent = code;
+      chats[currentChat] = {
+        description: document.getElementById("description").value,
+        command: document.getElementById("command").value,
+        output: code
+      };
+      saveChats();
     }
+
+    // beim Start laden
+    if (Object.keys(chats).length > 0) {
+      currentChat = Object.keys(chats)[0];
+      loadChat(currentChat);
+    }
+    renderChatList();
   </script>
 </body>
 </html>
